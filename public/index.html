@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexus — AI Chief of Staff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --red:#e2141c;
+    --red-deep:#9c0b10;
+    --red-glow:#ff4d4d;
+    --black:#131110;
+    --paper:#f4efe2;
+    --paper-dim:#e6ded0;
+    --pink:#ffd3de;
+    --green:#2ecc71;
+    --amber:#f5a623;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    background:
+      radial-gradient(120% 90% at 15% 0%, var(--red-glow) 0%, transparent 45%),
+      linear-gradient(180deg, var(--red) 0%, var(--red-deep) 100%);
+    font-family:'Barlow Condensed', sans-serif;
+    color:var(--black);
+    overflow:hidden;
+  }
+  .app{
+    height:100vh;
+    display:flex;
+    flex-direction:column;
+    max-width:560px;
+    margin:0 auto;
+    position:relative;
+    border-left:2px solid rgba(0,0,0,.25);
+    border-right:2px solid rgba(0,0,0,.25);
+  }
+
+  /* ---------- HEADER ---------- */
+  .header{
+    position:relative;
+    padding:14px 18px 22px 18px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-shrink:0;
+    z-index:5;
+  }
+  .logo{
+    font-family:'Anton', sans-serif;
+    font-size:34px;
+    color:var(--paper);
+    background:var(--black);
+    padding:2px 14px 6px 10px;
+    line-height:1;
+    transform:skewX(-8deg) rotate(-2deg);
+    clip-path:polygon(0 0,100% 0,94% 100%,4% 92%);
+    letter-spacing:1px;
+    box-shadow:4px 4px 0 rgba(0,0,0,.35);
+  }
+  .header-text{flex:1; color:var(--black);}
+  .header-title{
+    font-family:'Anton', sans-serif;
+    font-size:15px;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+  }
+  .header-sub{
+    font-size:13px;
+    font-weight:700;
+    opacity:.75;
+  }
+  .status-pills{ display:flex; gap:6px; }
+  .pill{
+    font-family:'Anton', sans-serif;
+    font-size:10px;
+    letter-spacing:.5px;
+    padding:5px 10px 6px 10px;
+    background:var(--black);
+    color:var(--paper-dim);
+    clip-path:polygon(10% 0,100% 0,90% 100%,0 100%);
+    cursor:pointer;
+    text-decoration:none;
+    display:flex;
+    align-items:center;
+    gap:5px;
+    white-space:nowrap;
+  }
+  .dotstatus{width:7px;height:7px;border-radius:50%;background:#666;flex-shrink:0;}
+  .dotstatus.on{background:var(--green);}
+  .dotstatus.off{background:#666;}
+  .header::after{
+    content:"";
+    position:absolute;
+    left:0; right:0; bottom:0;
+    height:6px;
+    background:repeating-linear-gradient(-45deg, var(--black) 0 14px, transparent 14px 20px);
+    opacity:.8;
+  }
+
+  /* ---------- CHAT AREA ---------- */
+  .chat-viewport{
+    flex:1;
+    position:relative;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding:26px 16px 10px 16px;
+    scrollbar-width:thin;
+  }
+  .chat-viewport::-webkit-scrollbar{width:6px;}
+  .chat-viewport::-webkit-scrollbar-thumb{background:rgba(0,0,0,.35);}
+
+  svg.spine{
+    position:absolute;
+    top:0; left:0;
+    width:100%;
+    height:100%;
+    pointer-events:none;
+    z-index:0;
+    overflow:visible;
+  }
+  #spineLine{
+    filter:drop-shadow(5px 6px 0 rgba(0,0,0,.55)) drop-shadow(0 0 10px rgba(0,0,0,.25));
+  }
+
+  .messages{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+  }
+
+  .date-pill{
+    align-self:center;
+    background:var(--paper);
+    font-family:'Anton', sans-serif;
+    font-size:13px;
+    letter-spacing:1px;
+    padding:5px 22px;
+    margin:6px 0 26px 0;
+    clip-path:polygon(3% 0,100% 8%,97% 100%,0 92%);
+    box-shadow:2px 2px 0 rgba(0,0,0,.5);
+    transform:rotate(-1deg);
+  }
+
+  .tool-pill{
+    align-self:flex-start;
+    margin:4px 0 4px 58px;
+    background:var(--amber);
+    color:var(--black);
+    font-family:'Anton', sans-serif;
+    font-size:11px;
+    letter-spacing:.3px;
+    padding:5px 12px;
+    clip-path:polygon(2% 0,100% 0,98% 100%,0 100%);
+    box-shadow:2px 2px 0 rgba(0,0,0,.4);
+    opacity:0;
+    animation:pop .3s ease forwards;
+  }
+
+  .msg-row{
+    display:flex;
+    align-items:flex-end;
+    margin:22px 0;
+    opacity:0;
+    transform:translateY(14px);
+    animation:pop .38s cubic-bezier(.2,.9,.3,1.3) forwards;
+  }
+  @keyframes pop{
+    to{opacity:1; transform:translateY(0);}
+  }
+  .msg-row.bot{ justify-content:flex-start; }
+  .msg-row.user{ justify-content:flex-end; }
+
+  .avatar{
+    width:46px;
+    height:46px;
+    flex-shrink:0;
+    background:var(--black);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    clip-path:polygon(0 0,92% 0,100% 15%,100% 100%,8% 100%,0 85%);
+    box-shadow:3px 3px 0 rgba(0,0,0,.45);
+    margin-right:-6px;
+  }
+  .avatar svg{width:26px;height:26px;}
+
+  .bubble-wrap{
+    position:relative;
+    max-width:74%;
+    margin:0 10px;
+  }
+  .bubble-wrap.bot{ margin-left:10px; }
+  .bubble-wrap.user{ margin-right:2px; }
+
+  .timestamp{
+    position:absolute;
+    top:-15px;
+    font-family:'Anton', sans-serif;
+    font-size:10.5px;
+    background:var(--black);
+    color:var(--paper);
+    padding:2px 8px 3px 8px;
+    clip-path:polygon(0 0,100% 0,92% 100%,0% 100%);
+    letter-spacing:.5px;
+    z-index:2;
+  }
+  .msg-row.bot .timestamp{ left:6px; }
+  .msg-row.user .timestamp{ right:6px; background:var(--paper); color:var(--black); border:2px solid var(--black); clip-path:polygon(8% 0,100% 0,100% 100%,0 100%);}
+
+  .bubble{
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:700;
+    font-size:16.5px;
+    line-height:1.25;
+    padding:14px 22px 16px 18px;
+    position:relative;
+    box-shadow:4px 4px 0 rgba(0,0,0,.4);
+  }
+  .bubble p{margin:0 0 8px 0;}
+  .bubble p:last-child{margin-bottom:0;}
+  .bubble ul,.bubble ol{margin:6px 0; padding-left:20px;}
+  .bubble code{background:rgba(0,0,0,.08); padding:1px 5px; font-family:monospace; font-size:14px;}
+  .bubble pre{background:rgba(0,0,0,.85); color:var(--paper); padding:10px 12px; overflow-x:auto; font-size:13px; font-family:monospace; font-weight:400;}
+  .bubble .attach-chip{
+    display:inline-flex; align-items:center; gap:6px;
+    background:rgba(0,0,0,.1); padding:4px 10px; margin:4px 4px 0 0;
+    font-size:13px; border-radius:2px;
+  }
+  .bubble.bot .attach-chip{ background:rgba(255,255,255,.12); }
+
+  .bubble.bot{
+    background:var(--black);
+    color:var(--paper);
+    border:3px solid var(--paper);
+    clip-path:polygon(0 0,88% 0,94% 18%,100% 10%,96% 40%,100% 55%,93% 78%,98% 100%,0 100%);
+    border-radius:1px 14px 1px 1px;
+  }
+  .bubble.user{
+    background:var(--paper);
+    color:var(--black);
+    border:3px solid var(--black);
+    clip-path:polygon(6% 0,100% 0,100% 100%,10% 100%,2% 78%,7% 55%,0 42%,6% 20%,0 8%);
+  }
+
+  .typing .bubble.bot{ display:flex; gap:6px; align-items:center; padding:16px 24px;}
+  .dot{width:8px;height:8px;background:var(--paper);border-radius:1px;animation:blink 1s infinite;}
+  .dot:nth-child(2){animation-delay:.15s;}
+  .dot:nth-child(3){animation-delay:.3s;}
+  @keyframes blink{ 0%,80%,100%{opacity:.25; transform:scale(.8);} 40%{opacity:1; transform:scale(1);} }
+
+  /* ---------- ATTACHMENT PREVIEW ---------- */
+  .attach-preview{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    padding:0 16px;
+    margin-bottom:6px;
+  }
+  .attach-item{
+    background:var(--black);
+    color:var(--paper);
+    font-size:12px;
+    font-weight:700;
+    padding:6px 10px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    clip-path:polygon(4% 0,100% 0,96% 100%,0 100%);
+  }
+  .attach-item button{
+    background:none; border:none; color:var(--paper); cursor:pointer;
+    font-family:'Anton', sans-serif; font-size:13px; line-height:1; padding:0;
+  }
+
+  /* ---------- INPUT BAR ---------- */
+  .inputbar{
+    flex-shrink:0;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px 16px 18px 16px;
+    position:relative;
+    z-index:5;
+  }
+  .inputbar::before{
+    content:"";
+    position:absolute;
+    top:0; left:0; right:0;
+    height:6px;
+    background:repeating-linear-gradient(-45deg, var(--black) 0 14px, transparent 14px 20px);
+    opacity:.8;
+  }
+  .attach-btn{
+    flex-shrink:0;
+    width:44px; height:44px;
+    background:var(--black);
+    border:none;
+    cursor:pointer;
+    clip-path:polygon(0 0,92% 0,100% 15%,100% 100%,8% 100%,0 85%);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:3px 3px 0 rgba(0,0,0,.4);
+  }
+  .attach-btn svg{ width:20px; height:20px; }
+  .input-shell{
+    flex:1;
+    background:var(--paper);
+    border:3px solid var(--black);
+    padding:10px 16px;
+    clip-path:polygon(1.5% 0,100% 0,98.5% 100%,0 100%);
+    box-shadow:3px 3px 0 rgba(0,0,0,.4);
+  }
+  .input-shell input{
+    width:100%;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-family:'Barlow Condensed', sans-serif;
+    font-weight:700;
+    font-size:16px;
+    color:var(--black);
+  }
+  .input-shell input::placeholder{ color:#8a8377; }
+  .send-btn{
+    font-family:'Anton', sans-serif;
+    font-size:16px;
+    letter-spacing:1px;
+    background:var(--black);
+    color:var(--paper);
+    border:none;
+    padding:12px 22px;
+    cursor:pointer;
+    clip-path:polygon(6% 0,100% 0,94% 100%,0 100%);
+    box-shadow:3px 3px 0 rgba(0,0,0,.4);
+    transition:transform .12s ease;
+  }
+  .send-btn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 rgba(0,0,0,.4); }
+  .send-btn:disabled{ opacity:.5; cursor:default; }
+
+  @media (max-width:400px){
+    .logo{font-size:26px;}
+    .bubble{font-size:15px; padding:12px 16px 14px 14px;}
+    .bubble-wrap{max-width:80%;}
+    .status-pills{display:none;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo">!M</div>
+    <div class="header-text">
+      <div class="header-title">Nexus</div>
+      <div class="header-sub">AI Chief of Staff</div>
+    </div>
+    <div class="status-pills" id="statusPills"></div>
+  </div>
+
+  <div class="chat-viewport" id="viewport">
+    <svg class="spine" id="spine"><polyline id="spineLine" fill="none" stroke="#131110" stroke-width="14" stroke-linejoin="round" stroke-linecap="round" /></svg>
+    <div class="messages" id="messages"></div>
+  </div>
+
+  <div class="attach-preview" id="attachPreview"></div>
+
+  <div class="inputbar">
+    <button class="attach-btn" id="attachBtn" title="Attach a file">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#f4efe2" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21.44 11.05l-9.19 9.19a5 5 0 01-7.07-7.07l9.19-9.19a3.5 3.5 0 014.95 4.95l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+      </svg>
+    </button>
+    <input type="file" id="fileInput" multiple hidden accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.txt,.md,.csv">
+    <div class="input-shell">
+      <input id="textInput" type="text" placeholder="Enter message..." autocomplete="off">
+    </div>
+    <button class="send-btn" id="sendBtn">SEND</button>
+  </div>
+</div>
+
+<script>
+const BOT_ICON = `<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <path d="M12 2L14 9L21 9L15.5 13L17.5 21L12 16.5L6.5 21L8.5 13L3 9L10 9L12 2Z" fill="#f4efe2"/>
+</svg>`;
+
+const state = {
+  messages: [],      // {role, text, time, attachments:[{name,mediaType,dataUrl,isImage}]}
+  pendingFiles: [],   // [{name, mediaType, base64, isImage}]
+  sending: false,
+  status: { linearEnabled:false, outlookConfigured:false, outlookConnected:false }
+};
+
+const messagesEl = document.getElementById('messages');
+const viewport = document.getElementById('viewport');
+const spineLine = document.getElementById('spineLine');
+const textInput = document.getElementById('textInput');
+const sendBtn = document.getElementById('sendBtn');
+const attachBtn = document.getElementById('attachBtn');
+const fileInput = document.getElementById('fileInput');
+const attachPreview = document.getElementById('attachPreview');
+const statusPills = document.getElementById('statusPills');
+
+function fmtTime(d){
+  let h=d.getHours(), m=d.getMinutes();
+  const ap = h>=12?'PM':'AM'; h=h%12; if(h===0) h=12;
+  return `${h}:${String(m).padStart(2,'0')} ${ap}`;
+}
+function fmtDate(d){
+  const days=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  return `${d.getMonth()+1}/${d.getDate()} ${days[d.getDay()]}`;
+}
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function renderText(text){
+  let t = escapeHtml(text || "");
+  t = t.replace(/```([\s\S]*?)```/g, (m,c)=>`<pre>${c.trim()}</pre>`);
+  t = t.replace(/`([^`]+)`/g, '<code>$1</code>');
+  t = t.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  const lines = t.split('\n');
+  let html='', inList=false;
+  for(const line of lines){
+    const m = line.match(/^\s*[-*]\s+(.*)/);
+    if(m){ if(!inList){html+='<ul>'; inList=true;} html+=`<li>${m[1]}</li>`; }
+    else { if(inList){html+='</ul>'; inList=false;} if(line.trim()==='') continue; html+=`<p>${line}</p>`; }
+  }
+  if(inList) html+='</ul>';
+  return html || '<p></p>';
+}
+
+let lastDateLabel = null;
+
+function renderAttachChips(attachments){
+  if(!attachments || !attachments.length) return '';
+  return attachments.map(a => `<span class="attach-chip">📎 ${escapeHtml(a.name)}</span>`).join('');
+}
+
+function renderMessage(msg, animate=true){
+  const d = msg.time;
+  const dateLabel = fmtDate(d);
+  if(dateLabel !== lastDateLabel){
+    lastDateLabel = dateLabel;
+    const pill = document.createElement('div');
+    pill.className = 'date-pill';
+    pill.textContent = dateLabel;
+    messagesEl.appendChild(pill);
+  }
+
+  const row = document.createElement('div');
+  row.className = `msg-row ${msg.role === 'user' ? 'user' : 'bot'}`;
+  if(!animate){ row.style.animation='none'; row.style.opacity=1; row.style.transform='none'; }
+
+  if(msg.role !== 'user'){
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.innerHTML = BOT_ICON;
+    row.appendChild(avatar);
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = `bubble-wrap ${msg.role === 'user' ? 'user' : 'bot'}`;
+
+  const ts = document.createElement('div');
+  ts.className = 'timestamp';
+  ts.textContent = fmtTime(d);
+  wrap.appendChild(ts);
+
+  const bubble = document.createElement('div');
+  bubble.className = `bubble ${msg.role === 'user' ? 'user' : 'bot'}`;
+  bubble.innerHTML = renderText(msg.text) + renderAttachChips(msg.attachments);
+  wrap.appendChild(bubble);
+
+  row.appendChild(wrap);
+  messagesEl.appendChild(row);
+  return row;
+}
+
+function renderToolPill(name){
+  const pill = document.createElement('div');
+  pill.className = 'tool-pill';
+  pill.textContent = `🔧 ${name.replace(/_/g,' ')}`;
+  messagesEl.appendChild(pill);
+  return pill;
+}
+
+function renderTyping(){
+  const row = document.createElement('div');
+  row.className = 'msg-row bot typing';
+  row.id = 'typingRow';
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar';
+  avatar.innerHTML = BOT_ICON;
+  row.appendChild(avatar);
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble-wrap bot';
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble bot';
+  bubble.innerHTML = '<span class="dot"></span><span class="dot"></span><span class="dot"></span>';
+  wrap.appendChild(bubble);
+  row.appendChild(wrap);
+  messagesEl.appendChild(row);
+  return row;
+}
+
+function scrollToBottom(){ viewport.scrollTop = viewport.scrollHeight; }
+
+function drawSpine(){
+  const rows = messagesEl.querySelectorAll('.msg-row');
+  const vpRect = viewport.getBoundingClientRect();
+  const points = [];
+  rows.forEach(row=>{
+    const avatar = row.querySelector('.avatar');
+    const bubble = row.querySelector('.bubble');
+    const rect = (avatar || bubble).getBoundingClientRect();
+    const isUser = row.classList.contains('user');
+    const x = isUser
+      ? (rect.right - vpRect.left + viewport.scrollLeft) - 14
+      : (rect.left - vpRect.left + viewport.scrollLeft) + 14;
+    const y = (rect.top - vpRect.top + viewport.scrollTop) + rect.height/2;
+    points.push(`${x},${y}`);
+  });
+  const svg = document.getElementById('spine');
+  svg.setAttribute('width', viewport.scrollWidth);
+  svg.setAttribute('height', viewport.scrollHeight);
+  spineLine.setAttribute('points', points.join(' '));
+  try{
+    const len = spineLine.getTotalLength();
+    spineLine.style.transition = 'none';
+    spineLine.style.strokeDasharray = len;
+    spineLine.style.strokeDashoffset = len;
+    spineLine.getBoundingClientRect();
+    spineLine.style.transition = 'stroke-dashoffset .6s ease-out';
+    spineLine.style.strokeDashoffset = 0;
+  }catch(e){}
+}
+
+function fullRender(){
+  messagesEl.innerHTML = '';
+  lastDateLabel = null;
+  state.messages.forEach(m => renderMessage(m, false));
+  requestAnimationFrame(()=>{ drawSpine(); scrollToBottom(); });
+}
+
+// ---------- Attachments ----------
+function renderAttachPreview(){
+  attachPreview.innerHTML = '';
+  state.pendingFiles.forEach((f, idx) => {
+    const chip = document.createElement('div');
+    chip.className = 'attach-item';
+    chip.innerHTML = `<span>📎 ${escapeHtml(f.name)}</span><button data-idx="${idx}">✕</button>`;
+    attachPreview.appendChild(chip);
+  });
+  attachPreview.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      state.pendingFiles.splice(Number(btn.dataset.idx), 1);
+      renderAttachPreview();
+    });
+  });
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+attachBtn.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', async () => {
+  for(const file of fileInput.files){
+    const base64 = await fileToBase64(file);
+    const isImage = file.type.startsWith('image/');
+    state.pendingFiles.push({ name: file.name, mediaType: file.type || 'application/octet-stream', base64, isImage });
+  }
+  fileInput.value = '';
+  renderAttachPreview();
+});
+
+// ---------- Status pills ----------
+async function loadStatus(){
+  try{
+    const res = await fetch('/api/status');
+    state.status = await res.json();
+  }catch(e){
+    state.status = { linearEnabled:false, outlookConfigured:false, outlookConnected:false };
+  }
+  renderStatusPills();
+}
+function renderStatusPills(){
+  statusPills.innerHTML = '';
+  const linear = document.createElement('div');
+  linear.className = 'pill';
+  linear.innerHTML = `<span class="dotstatus ${state.status.linearEnabled?'on':'off'}"></span>Linear`;
+  statusPills.appendChild(linear);
+
+  const outlook = document.createElement(state.status.outlookConnected ? 'div' : 'a');
+  outlook.className = 'pill';
+  if(!state.status.outlookConnected){ outlook.href = '/auth/microsoft'; }
+  outlook.innerHTML = `<span class="dotstatus ${state.status.outlookConnected?'on':'off'}"></span>Outlook`;
+  statusPills.appendChild(outlook);
+}
+
+// ---------- Sending ----------
+function buildUserContent(text, attachments){
+  const content = [];
+  for(const a of attachments){
+    if(a.isImage){
+      content.push({ type:'image', source:{ type:'base64', media_type:a.mediaType, data:a.base64 } });
+    } else {
+      content.push({ type:'document', source:{ type:'base64', media_type: a.mediaType || 'application/pdf', data:a.base64 } });
+    }
+  }
+  content.push({ type:'text', text: text || '(see attached file(s))' });
+  return content;
+}
+
+function toApiMessages(){
+  return state.messages.map(m => ({
+    role: m.role === 'user' ? 'user' : 'assistant',
+    content: m.apiContent
+  }));
+}
+
+async function sendMessage(){
+  const text = textInput.value.trim();
+  if((!text && state.pendingFiles.length===0) || state.sending) return;
+
+  const attachments = state.pendingFiles.map(f => ({ name:f.name }));
+  const apiContent = buildUserContent(text, state.pendingFiles);
+
+  const userMsg = { role:'user', text: text, time:new Date(), attachments, apiContent };
+  state.messages.push(userMsg);
+  renderMessage(userMsg, true);
+
+  textInput.value = '';
+  state.pendingFiles = [];
+  renderAttachPreview();
+  state.sending = true;
+  sendBtn.disabled = true;
+
+  requestAnimationFrame(()=>{ drawSpine(); scrollToBottom(); });
+  const typingRow = renderTyping();
+  scrollToBottom();
+
+  try{
+    const res = await fetch('/api/chat', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json' },
+      body: JSON.stringify({
+        messages: toApiMessages(),
+        linearEnabled: state.status.linearEnabled,
+        outlookEnabled: state.status.outlookConnected
+      })
+    });
+    const data = await res.json();
+    typingRow.remove();
+
+    if(data.toolLog && data.toolLog.length){
+      data.toolLog.forEach(t => renderToolPill(t.name));
+    }
+
+    const replyText = data.text || data.error || "Something went wrong.";
+    const botMsg = { role:'assistant', text: replyText, time:new Date(), apiContent:[{type:'text', text:replyText}] };
+    state.messages.push(botMsg);
+    renderMessage(botMsg, true);
+  }catch(err){
+    typingRow.remove();
+    const errMsg = { role:'assistant', text:"Couldn't reach the server — is it running?", time:new Date(), apiContent:[{type:'text', text:"error"}] };
+    state.messages.push(errMsg);
+    renderMessage(errMsg, true);
+  }finally{
+    state.sending = false;
+    sendBtn.disabled = false;
+    textInput.focus();
+    requestAnimationFrame(()=>{ drawSpine(); scrollToBottom(); });
+  }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+textInput.addEventListener('keydown', e => { if(e.key==='Enter') sendMessage(); });
+window.addEventListener('resize', drawSpine);
+
+// seed + boot
+const seedText = "Nexus online. Try **/checkin**, **/triage**, **/done**, or **/observe** — or just tell me what's on your plate. Attach files with the paperclip.";
+state.messages.push({ role:'assistant', text:seedText, time:new Date(), apiContent:[{type:'text', text:seedText}] });
+fullRender();
+loadStatus();
+textInput.focus();
+
+if(new URLSearchParams(location.search).get('outlook_connected')){
+  history.replaceState({}, '', '/');
+}
+</script>
+</body>
+</html>
